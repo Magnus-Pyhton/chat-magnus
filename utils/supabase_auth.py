@@ -8,8 +8,12 @@ class SupabaseAuthManager:
         self.supabase_url = "https://ctvaifbsemdvsaffmalk.supabase.co"
         self.supabase_key = "sb_publishable_GNTVXI_9_-rokKHs_iAIEg_L2ZO0RHA"
         
-        self.client: Client = create_client(self.supabase_url, self.supabase_key)
-        self._initialize_database()
+        try:
+            self.client: Client = create_client(self.supabase_url, self.supabase_key)
+            self._initialize_database()
+        except Exception as e:
+            print(f"Supabase Client Initialisierung fehlgeschlagen: {e}")
+            raise
     
     def _initialize_database(self):
         """Initialisiert die Datenbanktabelle für Benutzer"""
@@ -142,3 +146,35 @@ class SupabaseAuthManager:
             return True, "Benutzer erfolgreich gelöscht"
         except Exception as e:
             return False, f"Fehler beim Löschen: {str(e)}"
+    
+    def login(self, username, password):
+        """Login-Funktion"""
+        if self.verify_password(username, password):
+            import streamlit as st
+            st.session_state.authenticated = True
+            st.session_state.username = username
+            st.session_state.role = self.get_user_role(username)
+            return True
+        return False
+    
+    def logout(self):
+        """Logout-Funktion"""
+        import streamlit as st
+        st.session_state.authenticated = False
+        st.session_state.username = None
+        st.session_state.role = None
+    
+    def is_authenticated(self):
+        """Überprüft ob der Benutzer authentifiziert ist"""
+        import streamlit as st
+        return st.session_state.get('authenticated', False)
+    
+    def get_current_user(self):
+        """Gibt den aktuellen Benutzernamen zurück"""
+        import streamlit as st
+        return st.session_state.get('username', None)
+    
+    def get_current_role(self):
+        """Gibt die aktuelle Rolle zurück"""
+        import streamlit as st
+        return st.session_state.get('role', None)

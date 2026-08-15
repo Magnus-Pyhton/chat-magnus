@@ -26,6 +26,11 @@ except Exception as e:
     auth_manager = AuthManager()
     st.sidebar.warning(f"⚠️ Supabase Verbindung fehlgeschlagen, nutze lokale Auth: {e}")
 
+# Fallback zu AuthManager wenn Supabase Manager fehlgeschlagen ist
+if not hasattr(auth_manager, 'is_authenticated'):
+    auth_manager = AuthManager()
+    st.sidebar.warning("⚠️ Fallback zu lokaler Auth")
+
 # Initialize session state for auth
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
