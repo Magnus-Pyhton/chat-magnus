@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote, urljoin
 import re
+import sys
+import io
 
 def scrape_web(url):
     """Scrapt eine Webseite und extrahiert relevante Inhalte"""
@@ -13,14 +15,24 @@ def scrape_web(url):
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         
-        soup = BeautifulSoup(response.content, 'html.parser')
+        # Explizites Encoding für deutsche Umlaute
+        response.encoding = response.apparent_encoding
+        if 'charset' not in response.headers.get('content-type', ''):
+            response.encoding = 'utf-8'
+        
+        soup = BeautifulSoup(response.content, 'html.parser', from_encoding=response.encoding)
         
         # Entferne Scripts und Styles
         for script in soup(["script", "style", "nav", "footer", "header", "aside"]):
             script.decompose()
         
-        # Extrahiere Informationen
-        title = soup.title.string if soup.title else soup.h1.string if soup.h1 else "Kein Titel"
+        # Extrahiere Informationen mit Encoding-Handling
+        title = ""
+        if soup.title:
+            title = soup.title.string.strip() if soup.title.string else ""
+        elif soup.h1:
+            title = soup.h1.string.strip() if soup.h1.string else ""
+        
         content = soup.get_text(separator=' ', strip=True)
         
         # Meta-Informationen
@@ -35,19 +47,26 @@ def scrape_web(url):
         if meta_key:
             meta_keywords = meta_key.get('content', '')
         
-        # Links extrahieren
+        # Links extrahieren mit Encoding-Handling
         links = []
         for link in soup.find_all('a', href=True):
-            href = link['href']
-            text = link.get_text(strip=True)
-            if href and text:
-                absolute_url = urljoin(url, href)
-                links.append({"url": absolute_url, "text": text})
+            try:
+                href = link['href']
+                text = link.get_text(strip=True)
+                if href and text:
+                    absolute_url = urljoin(url, href)
+                    # Encoding-sichere Text-Extraktion
+                    if isinstance(text, str):
+                        text = text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+                    links.append({"url": absolute_url, "text": text})
+            except Exception as e:
+                print(f"Fehler beim Extrahieren eines Links: {e}")
+                continue
         
         return {
             "success": True,
             "url": url,
-            "title": title.strip(),
+            "title": title,
             "content": content[:10000],  # Limitiere Content-Länge
             "meta": {
                 "description": meta_description,
