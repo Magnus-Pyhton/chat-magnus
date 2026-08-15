@@ -1,0 +1,145 @@
+import hashlib
+import os
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class SupabaseAuthManager:
+    def __init__(self):
+        self.supabase_url = os.getenv('SUPABASE_URL')
+        self.supabase_key = os.getenv('SUPABASE_KEY')
+        
+        if not self.supabase_url or not self.supabase_key:
+            raise ValueError("SUPABASE_URL und SUPABASE_KEY müssen in .env Datei gesetzt sein")
+        
+        self.client: Client = create_client(self.supabase_url, self.supabase_key)
+        self._initialize_database()
+    
+    def _initialize_database(self):
+        """Initialisiert die Datenbanktabelle für Benutzer"""
+        # In Produktion würde dies durch SQL Migrationen erfolgen
+        # Hier erstellen wir die Tabelle falls sie nicht existiert
+        try:
+            # Versuche die Tabelle zu erstellen
+            self.client.table('users').select('*').limit(1).execute()
+        except:
+            # Tabelle existiert nicht, erstelle sie
+            self._create_users_table()
+    
+    def _create_users_table(self):
+        """Erstellt die Benutzer Tabelle via SQL"""
+        # Dies sollte in Produktion durch Supabase Dashboard oder Migrationen erfolgen
+        # Hier als Fallback für Entwicklung
+        create_table_sql = """
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            role VARCHAR(20) DEFAULT 'user',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        
+        try:
+            # In Supabase müsste dies über das Dashboard oder RPC Functions erfolgen
+            # Für jetzt fangen wir den Fehler ab und loggen ihn
+            print("Hinweis: Erstelle die 'users' Tabelle manuell im Supabase Dashboard")
+            print("SQL:", create_table_sql)
+        except Exception as e:
+            print(f"Fehler beim Erstellen der Tabelle: {e}")
+    
+    def _hash_password(self, password):
+        """Hash ein Passwort mit SHA-256"""
+        return hashlib.sha256(password.encode()).hexdigest()
+    
+    def _validate_username(self, username):
+        """Validiert Benutzernamen"""
+        if not username or len(username) < 3:
+            return False, "Benutzername muss mindestens 3 Zeichen lang sein"
+        if not username.isalnum() and "_" not in username and "-" not in username:
+            return False, "Benutzername darf nur Buchstaben, Zahlen, _ und - enthalten"
+        return True, ""
+    
+    def _validate_password(self, password):
+        """Validiert Passwort"""
+        if not password or len(password) < 4:
+            return False, "Passwort muss mindestens 4 Zeichen lang sein"
+        return True, ""
+    
+    def add_user(self, username, password, role="user"):
+        """Fügt einen neuen Benutzer hinzu"""
+        # Validierung
+        valid, error = self._validate_username(username)
+        if not valid:
+            return False, error
+        
+        valid, error = self._validate_password(password)
+        if not valid:
+            return False, error
+        
+        try:
+            # Prüfe ob Benutzer bereits existiert
+            existing = self.client.table('users').select('*').eq('username', username).execute()
+            if existing.data:
+                return False, "Benutzername existiert bereits"
+            
+            # Füge neuen Benutzer hinzu
+            self.client.table('users').insert({
+                'username': username,
+                'password_hash': self._hash_password(password),
+                'role': role
+            }).execute()
+            
+            return True, "Benutzer erfolgreich erstellt"
+        except Exception as e:
+            return False, f"Datenbankfehler: {str(e)}"
+    
+    def verify_password(self, username, password):
+        """Überprüft Benutzername und Passwort"""
+        try:
+            result = self.client.table('users').select('*').eq('username', username).execute()
+            
+            if not result.data:
+                return False
+            
+            user = result.data[0]
+            hashed_password = self._hash_password(password)
+            return user['password_hash'] == hashed_password
+        except Exception as e:
+            print(f"Fehler bei Passwort-Verifizierung: {e}")
+            return False
+    
+    def get_user_role(self, username):
+        """Gibt die Rolle des Benutzers zurück"""
+        try:
+            result = self.client.table('users').select('*').eq('username', username).execute()
+            
+            if not result.data:
+                return None
+            
+            return result.data[0]['role']
+        except Exception as e:
+            print(f"Fehler beim Abrufen der Benutzerrolle: {e}")
+            return None
+    
+    def is_admin(self, username):
+        """Überprüft ob der Benutzer Admin ist"""
+        return self.get_user_role(username) == "admin"
+    
+    def get_all_users(self):
+        """Gibt alle Benutzernamen zurück (außer Passwörter)"""
+        try:
+            result = self.client.table('users').select('username', 'role').execute()
+            return {user['username']: {"role": user['role']} for user in result.data}
+        except Exception as e:
+            print(f"Fehler beim Abrufen aller Benutzer: {e}")
+            return {}
+    
+    def delete_user(self, username):
+        """Löscht einen Benutzer"""
+        try:
+            self.client.table('users').delete().eq('username', username).execute()
+            return True, "Benutzer erfolgreich gelöscht"
+        except Exception as e:
+            return False, f"Fehler beim Löschen: {str(e)}"
