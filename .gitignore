@@ -35,6 +35,9 @@ ENV/
 # Environment variables
 .env
 
+# User data
+users.json
+
 # OS
 .DS_Store
 Thumbs.db

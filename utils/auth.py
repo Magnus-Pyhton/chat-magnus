@@ -1,19 +1,52 @@
 import hashlib
+import json
+import os
 import streamlit as st
 
 class AuthManager:
     def __init__(self):
-        # Vorprogrammierte Benutzer (in einer echten App würde dies in einer Datenbank sein)
-        self.users = {
+        self.users_file = "users.json"
+        self.users = self._load_users()
+    
+    def _load_users(self):
+        """Lädt Benutzer aus einer JSON-Datei"""
+        if os.path.exists(self.users_file):
+            try:
+                with open(self.users_file, 'r') as f:
+                    return json.load(f)
+            except:
+                pass
+        
+        # Standard-Benutzer wenn Datei nicht existiert oder fehlerhaft
+        return {
             "admin": {
                 "password": self._hash_password("5107"),
                 "role": "admin"
             }
         }
     
+    def _save_users(self):
+        """Speichert Benutzer in einer JSON-Datei"""
+        with open(self.users_file, 'w') as f:
+            json.dump(self.users, f)
+    
     def _hash_password(self, password):
         """Hash ein Passwort mit SHA-256"""
         return hashlib.sha256(password.encode()).hexdigest()
+    
+    def _validate_username(self, username):
+        """Validiert Benutzernamen"""
+        if not username or len(username) < 3:
+            return False, "Benutzername muss mindestens 3 Zeichen lang sein"
+        if not username.isalnum() and "_" not in username and "-" not in username:
+            return False, "Benutzername darf nur Buchstaben, Zahlen, _ und - enthalten"
+        return True, ""
+    
+    def _validate_password(self, password):
+        """Validiert Passwort"""
+        if not password or len(password) < 4:
+            return False, "Passwort muss mindestens 4 Zeichen lang sein"
+        return True, ""
     
     def verify_password(self, username, password):
         """Überprüft Benutzername und Passwort"""
@@ -35,14 +68,28 @@ class AuthManager:
     
     def add_user(self, username, password, role="user"):
         """Fügt einen neuen Benutzer hinzu"""
+        # Validierung
+        valid, error = self._validate_username(username)
+        if not valid:
+            return False, error
+        
+        valid, error = self._validate_password(password)
+        if not valid:
+            return False, error
+        
         if username in self.users:
-            return False
+            return False, "Benutzername existiert bereits"
         
         self.users[username] = {
             "password": self._hash_password(password),
             "role": role
         }
-        return True
+        self._save_users()
+        return True, "Benutzer erfolgreich erstellt"
+    
+    def get_all_users(self):
+        """Gibt alle Benutzernamen zurück (außer Passwörter)"""
+        return {username: {"role": user["role"]} for username, user in self.users.items()}
     
     def login(self, username, password):
         """Login-Funktion"""

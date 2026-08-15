@@ -121,17 +121,18 @@ if not auth_manager.is_authenticated():
     
     st.markdown('<div class="login-header">🤖 Chat Magnus</div>', unsafe_allow_html=True)
     
-    st.markdown('<div class="welcome-text">', unsafe_allow_html=True)
-    st.markdown('<h2>🔐 Login</h2>', unsafe_allow_html=True)
-    st.markdown('<p>Melde dich an, um auf Chat Magnus Funktionen zuzugreifen</p>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Tab für Login/Register
+    tab1, tab2 = st.tabs(["🔐 Login", "📝 Registrieren"])
     
-    username = st.text_input("Benutzername", placeholder="z.B. admin")
-    password = st.text_input("Passwort", type="password", placeholder="Dein Passwort")
-    
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
+    with tab1:
+        st.markdown('<div class="welcome-text">', unsafe_allow_html=True)
+        st.markdown('<h2>🔐 Login</h2>', unsafe_allow_html=True)
+        st.markdown('<p>Melde dich an, um auf Chat Magnus Funktionen zuzugreifen</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        username = st.text_input("Benutzername", placeholder="z.B. admin", key="login_username")
+        password = st.text_input("Passwort", type="password", placeholder="Dein Passwort", key="login_password")
+        
         if st.button("🔑 Einloggen", use_container_width=True):
             if auth_manager.login(username, password):
                 st.success("✅ Erfolgreich eingeloggt!")
@@ -139,9 +140,28 @@ if not auth_manager.is_authenticated():
             else:
                 st.error("❌ Falscher Benutzername oder Passwort")
     
-    with col2:
-        if st.button("📝 Registrieren", use_container_width=True):
-            st.info("ℹ️ Registrierung ist derzeit deaktiviert. Kontaktiere den Admin für neue Benutzer.")
+    with tab2:
+        st.markdown('<div class="welcome-text">', unsafe_allow_html=True)
+        st.markdown('<h2>📝 Registrieren</h2>', unsafe_allow_html=True)
+        st.markdown('<p>Erstelle einen neuen Account für Chat Magnus</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        new_username = st.text_input("Benutzername", placeholder="Mindestens 3 Zeichen", key="reg_username")
+        new_password = st.text_input("Passwort", type="password", placeholder="Mindestens 4 Zeichen", key="reg_password")
+        confirm_password = st.text_input("Passwort bestätigen", type="password", placeholder="Passwort wiederholen", key="reg_confirm")
+        
+        if st.button("📝 Account erstellen", use_container_width=True):
+            if not new_username or not new_password:
+                st.error("❌ Bitte alle Felder ausfüllen")
+            elif new_password != confirm_password:
+                st.error("❌ Passwörter stimmen nicht überein")
+            else:
+                success, message = auth_manager.add_user(new_username, new_password)
+                if success:
+                    st.success(f"✅ {message}")
+                    st.info("👤 Du kannst dich jetzt einloggen!")
+                else:
+                    st.error(f"❌ {message}")
     
     st.markdown('</div>', unsafe_allow_html=True)
     
@@ -206,7 +226,7 @@ with st.sidebar:
     st.subheader("📱 Navigation")
     page = st.radio(
         "Wähle eine Funktion:",
-        ["💻 Code Generator", "💬 Chat mit Internet", "🎨 Bild KI"],
+        ["💻 Code Generator", "💬 Chat mit Internet", "🎨 Bild KI", "👥 Benutzer verwalten"],
         label_visibility="collapsed"
     )
     
@@ -433,6 +453,56 @@ elif page == "🎨 Bild KI":
         if st.button("🗑️ Galerie leeren"):
             st.session_state.generated_images = []
             st.rerun()
+
+elif page == "👥 Benutzer verwalten":
+    st.markdown('<div class="main-header">👥 Benutzer verwalten</div>', unsafe_allow_html=True)
+    
+    # Nur Admin darf Benutzer verwalten
+    if not auth_manager.is_admin(current_user):
+        st.error("❌ Nur Admins dürfen Benutzer verwalten")
+    else:
+        st.subheader("Alle Benutzer")
+        
+        users = auth_manager.get_all_users()
+        
+        if users:
+            # Benutzer in einer Tabelle anzeigen
+            user_data = []
+            for username, user_info in users.items():
+                user_data.append({
+                    "Benutzername": username,
+                    "Rolle": user_info["role"],
+                    "Aktionen": f"{'⭐ Admin' if user_info['role'] == 'admin' else '👤 User'}"
+                })
+            
+            st.dataframe(user_data, use_container_width=True)
+            
+            # Neuen Benutzer erstellen (Admin-Funktion)
+            st.markdown("---")
+            st.subheader("Neuen Benutzer erstellen")
+            
+            admin_username = st.text_input("Benutzername", placeholder="Neuer Benutzername", key="admin_new_username")
+            admin_password = st.text_input("Passwort", type="password", placeholder="Passwort", key="admin_new_password")
+            admin_role = st.selectbox("Rolle", ["user", "admin"], key="admin_new_role")
+            
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("➕ Benutzer erstellen", use_container_width=True):
+                    if admin_username and admin_password:
+                        success, message = auth_manager.add_user(admin_username, admin_password, admin_role)
+                        if success:
+                            st.success(f"✅ {message}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {message}")
+                    else:
+                        st.error("❌ Bitte Benutzername und Passwort eingeben")
+            
+            with col2:
+                if st.button("🔄 Benutzerliste aktualisieren", use_container_width=True):
+                    st.rerun()
+        else:
+            st.info("ℹ️ Keine Benutzer gefunden (außer Admin)")
 
 # Footer
 st.markdown("---")
