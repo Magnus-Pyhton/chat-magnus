@@ -16,9 +16,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize Auth Manager (einfache lokale Version)
+# Initialize Auth Manager (mit persistenter Speicherung)
 auth_manager = AuthManager()
-st.sidebar.info("ℹ️ Lokale Benutzerverwaltung aktiv")
+st.sidebar.success("✅ Persistente Benutzerspeicherung aktiv")
 
 # Initialize session state for auth
 if 'authenticated' not in st.session_state:

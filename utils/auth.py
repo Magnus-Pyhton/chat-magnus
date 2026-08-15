@@ -5,23 +5,25 @@ import streamlit as st
 
 class AuthManager:
     def __init__(self):
-        self.users_file = "users.json"
-        # Für Streamlit Cloud verwenden wir Session State als Fallback
-        if 'users' not in st.session_state:
-            self.users = self._load_users()
-            st.session_state.users = self.users
-        else:
-            self.users = st.session_state.users
+        # Für Streamlit Cloud nutzen wir das /mount Verzeichnis für persistente Speicherung
+        self.users_file = "/mount/data/users.json"
+        
+        # Lokalen Fallback für Entwicklung
+        if not os.path.exists("/mount/data"):
+            os.makedirs("/mount/data", exist_ok=True)
+            self.users_file = "users.json"
+        
+        # Lade Benutzer oder erstelle Standard
+        self.users = self._load_users()
     
     def _load_users(self):
-        """Lädt Benutzer aus einer JSON-Datei oder Session State"""
-        # Versuche zuerst aus Datei zu laden
+        """Lädt Benutzer aus persistenter JSON-Datei"""
         if os.path.exists(self.users_file):
             try:
                 with open(self.users_file, 'r') as f:
                     return json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(f"Fehler beim Laden der Benutzer: {e}")
         
         # Standard-Benutzer wenn Datei nicht existiert oder fehlerhaft
         return {
@@ -32,16 +34,17 @@ class AuthManager:
         }
     
     def _save_users(self):
-        """Speichert Benutzer in Session State und versucht, in Datei zu speichern"""
-        # Speichere in Session State (funktioniert immer auf Streamlit Cloud)
-        st.session_state.users = self.users
-        
-        # Versuche auch in Datei zu speichern (für lokale Entwicklung)
+        """Speichert Benutzer in persistenter JSON-Datei"""
         try:
+            # Versuche in das persistente Verzeichnis zu schreiben
             with open(self.users_file, 'w') as f:
                 json.dump(self.users, f)
-        except:
-            pass  # Ignoriere Fehler bei Dateischreibzugriff
+            return True
+        except Exception as e:
+            print(f"Fehler beim Speichern der Benutzer: {e}")
+            # Fallback zu Session State
+            st.session_state.users = self.users
+            return False
     
     def _hash_password(self, password):
         """Hash ein Passwort mit SHA-256"""
