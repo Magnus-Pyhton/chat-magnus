@@ -1,17 +1,12 @@
 from .openai_client import OpenAIClient
-from .web_scraper import perform_web_search
+from .web_scraper import perform_web_search, safe_print, safe_text
 import sys
+import io
 
-# Encoding-sichere Ausgabe
-def safe_print(text):
-    """Druckt Text mit Encoding-Fallback"""
-    if isinstance(text, str):
-        try:
-            print(text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore'))
-        except:
-            print(text)
-    else:
-        print(text)
+# System Encoding auf UTF-8 setzen
+if sys.version_info[0] >= 3:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignore')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='ignore')
 
 class ChatBot:
     def __init__(self, api_key=None):
@@ -21,7 +16,7 @@ class ChatBot:
         """Chat-Funktion mit Internet-Suche wenn nötig"""
         try:
             # Encoding-sichere Nachricht
-            message = message.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+            message = safe_text(message)
             
             # Analysiere ob Web-Suche benötigt wird
             analysis = self.openai_client.analyze_search_need(message)
@@ -41,14 +36,8 @@ class ChatBot:
                     context = "\n\nRelevante Informationen aus Web-Suche:\n"
                     for i, result in enumerate(search_results, 1):
                         # Encoding-sichere Text-Extraktion
-                        title = result.get('title', '')
-                        snippet = result.get('snippet', '')
-                        
-                        # Encoding-sichere String-Verarbeitung
-                        if isinstance(title, str):
-                            title = title.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
-                        if isinstance(snippet, str):
-                            snippet = snippet.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+                        title = safe_text(result.get('title', ''))
+                        snippet = safe_text(result.get('snippet', ''))
                         
                         context += f"\n{i}. {title}\n{snippet}\n"
             

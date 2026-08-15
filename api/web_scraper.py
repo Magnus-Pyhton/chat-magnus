@@ -5,6 +5,25 @@ import re
 import sys
 import io
 
+# System Encoding auf UTF-8 setzen
+if sys.version_info[0] >= 3:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignore')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='ignore')
+
+def safe_text(text):
+    """Encoding-sichere Text-Konvertierung"""
+    if text is None:
+        return ""
+    if isinstance(text, bytes):
+        try:
+            return text.decode('utf-8', errors='ignore')
+        except:
+            return text.decode('latin-1', errors='ignore')
+    elif isinstance(text, str):
+        return text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+    else:
+        return str(text)
+
 def scrape_web(url):
     """Scrapt eine Webseite und extrahiert relevante Inhalte"""
     try:
@@ -81,8 +100,21 @@ def scrape_web(url):
             "url": url
         }
 
+def safe_print(text):
+    """Encoding-sichere Print-Funktion"""
+    if text is None:
+        return
+    text = safe_text(text)
+    try:
+        print(text)
+    except Exception as e:
+        print(f"Print-Fehler: {e}")
+
 def perform_web_search(query):
     """Führt eine einfache Web-Suche durch (simuliert)"""
+    # Encoding-sichere Query
+    query = safe_text(query)
+    
     # In einer echten Implementierung würde hier eine Search-API verwendet
     # Für dieses Beispiel verwenden wir DuckDuckGo und Google als Beispiele
     
@@ -103,7 +135,7 @@ def perform_web_search(query):
                 if len(results) >= 5:
                     break
         except Exception as e:
-            print(f"Suchfehler für {search_url}: {e}")
+            safe_print(f"Suchfehler für {search_url}: {e}")
     
     return results
 

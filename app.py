@@ -1,11 +1,18 @@
 import streamlit as st
 import os
+import sys
 from dotenv import load_dotenv
 from api.openai_client import OpenAIClient
 from api.chatbot import ChatBot
 from api.web_scraper import scrape_web
 from utils.auth import AuthManager
 from utils.supabase_auth import SupabaseAuthManager
+
+# System Encoding auf UTF-8 setzen
+if sys.version_info[0] >= 3:
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignore')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='ignore')
 
 load_dotenv()
 
