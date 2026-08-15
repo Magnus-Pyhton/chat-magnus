@@ -314,7 +314,7 @@ if page == "💻 Code Generator":
             else:
                 with st.spinner("Generiere Code..."):
                     try:
-                        client = OpenAIClient()
+                        client = OpenAIClient(api_key=st.session_state.api_key)
                         result = client.generate_code(prompt, language.lower())
                         
                         if result["success"]:
@@ -367,7 +367,7 @@ elif page == "💬 Chat mit Internet":
                 
                 with st.spinner("Denke nach..."):
                     try:
-                        chatbot = ChatBot()
+                        chatbot = ChatBot(api_key=st.session_state.api_key)
                         result = chatbot.chat_with_internet(user_input)
                         
                         if result["success"]:
@@ -423,7 +423,7 @@ elif page == "🎨 Bild KI":
             else:
                 with st.spinner("Generiere Bild..."):
                     try:
-                        client = OpenAIClient()
+                        client = OpenAIClient(api_key=st.session_state.api_key)
                         result = client.generate_image(prompt, size, quality, style)
                         
                         if result["success"]:
@@ -465,7 +465,7 @@ elif page == "🎨 Bild KI":
                 else:
                     with st.spinner("Bearbeite Bild..."):
                         try:
-                            client = OpenAIClient()
+                            client = OpenAIClient(api_key=st.session_state.api_key)
                             image_data = uploaded_file.getvalue()
                             result = client.edit_image(image_data, edit_prompt)
                             

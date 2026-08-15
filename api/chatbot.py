@@ -14,8 +14,8 @@ def safe_print(text):
         print(text)
 
 class ChatBot:
-    def __init__(self):
-        self.openai_client = OpenAIClient()
+    def __init__(self, api_key=None):
+        self.openai_client = OpenAIClient(api_key=api_key)
     
     def chat_with_internet(self, message):
         """Chat-Funktion mit Internet-Suche wenn nötig"""

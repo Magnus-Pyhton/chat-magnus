@@ -5,10 +5,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class OpenAIClient:
-    def __init__(self):
-        self.api_key = os.getenv('OPENAI_API_KEY')
+    def __init__(self, api_key=None):
+        # API Key aus verschiedenen Quellen laden
+        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        
+        # Versuche auch Session State wenn verfügbar
         if not self.api_key:
-            raise ValueError("OPENAI_API_KEY nicht gefunden. Bitte in .env Datei setzen.")
+            try:
+                import streamlit as st
+                self.api_key = st.session_state.get('api_key', '')
+            except:
+                pass
+        
+        # Versuche Secrets
+        if not self.api_key:
+            try:
+                import streamlit as st
+                self.api_key = st.secrets.get('OPENAI_API_KEY', '')
+            except:
+                pass
+        
+        if not self.api_key:
+            raise ValueError("OPENAI_API_KEY nicht gefunden. Bitte in Settings einrichten oder in .env Datei setzen.")
+        
         self.client = OpenAI(api_key=self.api_key)
     
     def generate_code(self, prompt, language="auto"):
