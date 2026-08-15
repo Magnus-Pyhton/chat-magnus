@@ -205,7 +205,7 @@ with st.sidebar:
     current_role = auth_manager.get_current_role()
     
     st.markdown(f"""
-    <div style='padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;'>
+    <div style='padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; margin-bottom: 20px;'>
         <strong>👤 Benutzer:</strong> {current_user}<br>
         <strong>⭐ Rolle:</strong> {current_role}
     </div>
