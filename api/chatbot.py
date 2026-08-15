@@ -18,7 +18,7 @@ class ChatBot:
             used_search = False
             
             if analysis.startswith("SEARCH:"):
-                search_query = analysis.replace("SEARCH:", "").strip()
+                search_query = safe_text(analysis.replace("SEARCH:", "").strip())
                 safe_print(f"Suche nach: {search_query}")
                 
                 # Führe Web-Suche durch
@@ -46,5 +46,5 @@ class ChatBot:
         except Exception as e:
             return {
                 "success": False,
-                "error": str(e)
+                "error": safe_text(str(e))
             }

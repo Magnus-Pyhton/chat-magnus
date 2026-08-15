@@ -51,11 +51,11 @@ def scrape_web(url):
         # Extrahiere Informationen mit Encoding-Handling
         title = ""
         if soup.title:
-            title = soup.title.string.strip() if soup.title.string else ""
+            title = safe_text(soup.title.string.strip() if soup.title.string else "")
         elif soup.h1:
-            title = soup.h1.string.strip() if soup.h1.string else ""
+            title = safe_text(soup.h1.string.strip() if soup.h1.string else "")
         
-        content = soup.get_text(separator=' ', strip=True)
+        content = safe_text(soup.get_text(separator=' ', strip=True))
         
         # Meta-Informationen
         meta_description = ""
@@ -63,11 +63,11 @@ def scrape_web(url):
         
         meta_desc = soup.find('meta', attrs={'name': 'description'})
         if meta_desc:
-            meta_description = meta_desc.get('content', '')
+            meta_description = safe_text(meta_desc.get('content', ''))
         
         meta_key = soup.find('meta', attrs={'name': 'keywords'})
         if meta_key:
-            meta_keywords = meta_key.get('content', '')
+            meta_keywords = safe_text(meta_key.get('content', ''))
         
         # Links extrahieren mit Encoding-Handling
         links = []
@@ -79,10 +79,10 @@ def scrape_web(url):
                     absolute_url = urljoin(url, href)
                     # Encoding-sichere Text-Extraktion
                     if isinstance(text, str):
-                        text = text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+                        text = safe_text(text)
                     links.append({"url": absolute_url, "text": text})
             except Exception as e:
-                print(f"Fehler beim Extrahieren eines Links: {e}")
+                safe_print(f"Fehler beim Extrahieren eines Links: {e}")
                 continue
         
         return {
@@ -99,7 +99,7 @@ def scrape_web(url):
     except Exception as e:
         return {
             "success": False,
-            "error": str(e),
+            "error": safe_text(str(e)),
             "url": url
         }
 

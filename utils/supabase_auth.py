@@ -2,10 +2,8 @@ import hashlib
 import json
 import os
 from supabase import create_client, Client
-import sys
 
-# Encoding-sichere Funktionen
-def safe_str(obj):
+def safe_text(obj):
     """Konvertiert zu String mit Encoding-Fallback"""
     if isinstance(obj, bytes):
         try:
@@ -16,6 +14,16 @@ def safe_str(obj):
         return obj.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
     else:
         return str(obj)
+
+def safe_print(text):
+    """Encoding-sichere Print-Funktion"""
+    if text is None:
+        return
+    text = safe_text(text)
+    try:
+        print(text)
+    except Exception as e:
+        pass
 
 class SupabaseAuthManager:
     def __init__(self):
@@ -70,7 +78,7 @@ class SupabaseAuthManager:
     def add_user(self, username, password, role="user"):
         """Fügt einen neuen Benutzer hinzu"""
         # Encoding-sichere Validierung
-        username = safe_str(username)
+        username = safe_text(username)
         
         # Validierung
         valid, error = self._validate_username(username)
@@ -108,8 +116,8 @@ class SupabaseAuthManager:
                         }).execute()
                         return True, "Benutzer erfolgreich erstellt (Tabelle wurde erstellt)"
                     except Exception as e2:
-                        return False, f"Fehler nach Tabellenerstellung: {str(e2)}"
-            return False, f"Datenbankfehler: {str(e)}"
+                        return False, safe_text(f"Fehler nach Tabellenerstellung: {str(e2)}")
+            return False, safe_text(f"Datenbankfehler: {str(e)}")
     
     def _create_users_table(self):
         """Erstellt die Benutzer Tabelle via Supabase SQL"""
