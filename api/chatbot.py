@@ -21,22 +21,26 @@ class ChatBot:
             context = ""
             used_search = False
             
-            if analysis.startswith("SEARCH:"):
-                search_query = safe_text(analysis.replace("SEARCH:", "").strip())
-                safe_print(f"Suche nach: {search_query}")
-                
-                # Führe Web-Suche durch
-                search_results = perform_web_search(search_query)
-                
-                if search_results:
-                    used_search = True
-                    context = "\n\nRelevante Informationen aus Web-Suche:\n"
-                    for i, result in enumerate(search_results, 1):
-                        # Encoding-sichere Text-Extraktion
-                        title = safe_text(result.get('title', ''))
-                        snippet = safe_text(result.get('snippet', ''))
-                        
-                        context += f"\n{i}. {title}\n{snippet}\n"
+            # WEB-SUCHE VORÜBERGEHEND DEAKTIVIERT WEGEN ENCODING-PROBLEMEN
+            # Die App verwendet jetzt nur GPTs Wissen ohne Web-Suche
+            # Wenn du die Web-Suche wieder aktivieren willst, kommentiere die Zeilen unten ein
+            
+            # if analysis.startswith("SEARCH:"):
+            #     search_query = safe_text(analysis.replace("SEARCH:", "").strip())
+            #     safe_print(f"Suche nach: {search_query}")
+            #     
+            #     # Führe Web-Suche durch
+            #     search_results = perform_web_search(search_query)
+            #     
+            #     if search_results:
+            #         used_search = True
+            #         context = "\n\nRelevante Informationen aus Web-Suche:\n"
+            #         for i, result in enumerate(search_results, 1):
+            #             # Encoding-sichere Text-Extraktion
+            #             title = safe_text(result.get('title', ''))
+            #             snippet = safe_text(result.get('snippet', ''))
+            #             
+            #             context += f"\n{i}. {title}\n{snippet}\n"
             
             # Generiere Antwort mit oder ohne Kontext
             result = self.openai_client.chat_with_context(message, context)
