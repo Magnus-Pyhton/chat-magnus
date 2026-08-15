@@ -43,6 +43,14 @@ CREATE TABLE IF NOT EXISTS users (
 INSERT INTO users (username, password_hash, role)
 VALUES ('admin', 'ec2a01611db7fd2f95b5238169442a3d737f3838a7cd90401e1aacf5aff64630', 'admin')
 ON CONFLICT (username) DO NOTHING;
+
+-- Erstelle die API Keys Tabelle für persistente API Key Speicherung
+CREATE TABLE IF NOT EXISTS api_keys (
+    id SERIAL PRIMARY KEY,
+    provider VARCHAR(50) UNIQUE NOT NULL,
+    api_key TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 3. Klicke "Run"

@@ -5,6 +5,7 @@ from api.openai_client import OpenAIClient
 from api.chatbot import ChatBot
 from api.web_scraper import scrape_web
 from utils.auth import AuthManager
+from utils.supabase_auth import SupabaseAuthManager
 
 load_dotenv()
 
@@ -17,18 +18,23 @@ st.set_page_config(
 )
 
 # Initialize Auth Manager mit Supabase
+auth_manager = None
+supabase_available = False
+
 try:
-    from utils.supabase_auth import SupabaseAuthManager
     auth_manager = SupabaseAuthManager()
+    supabase_available = True
     st.sidebar.success("✅ Supabase Datenbank verbunden")
 except Exception as e:
     # Fallback zu lokaler Auth bei Fehlern
     auth_manager = AuthManager()
+    supabase_available = False
     st.sidebar.warning(f"⚠️ Supabase Verbindung fehlgeschlagen, nutze lokale Auth: {e}")
 
 # Fallback zu AuthManager wenn Supabase Manager fehlgeschlagen ist
 if not hasattr(auth_manager, 'is_authenticated'):
     auth_manager = AuthManager()
+    supabase_available = False
     st.sidebar.warning("⚠️ Fallback zu lokaler Auth")
 
 # Initialize session state for auth
@@ -181,11 +187,20 @@ if not auth_manager.is_authenticated():
 
 # Initialize session state
 if 'api_key' not in st.session_state:
-    # Versuche zuerst Umgebungsvariable, dann Secrets
+    # Versuche zuerst Umgebungsvariable, dann Secrets, dann Supabase
     st.session_state.api_key = os.getenv('OPENAI_API_KEY', '')
     if not st.session_state.api_key:
         try:
             st.session_state.api_key = st.secrets['OPENAI_API_KEY']
+        except:
+            pass
+    
+    # Versuche API Key aus Supabase zu laden
+    if not st.session_state.api_key and supabase_available:
+        try:
+            supabase_key = auth_manager.get_api_key('openai')
+            if supabase_key:
+                st.session_state.api_key = supabase_key
         except:
             pass
 
@@ -221,11 +236,26 @@ with st.sidebar:
     if auth_manager.is_admin(current_user):
         st.subheader("⚙️ API Konfiguration")
         api_key = st.text_input("OpenAI API Key", type="password", value=st.session_state.api_key)
-        st.session_state.api_key = api_key
         
-        if api_key:
-            os.environ['OPENAI_API_KEY'] = api_key
-            st.success("✅ API Key gespeichert")
+        if st.button("💾 API Key speichern", use_container_width=True):
+            if api_key:
+                st.session_state.api_key = api_key
+                os.environ['OPENAI_API_KEY'] = api_key
+                
+                # Auch in Supabase speichern für Persistenz
+                if supabase_available:
+                    success, message = auth_manager.save_api_key('openai', api_key)
+                    if success:
+                        st.success(f"✅ {message}")
+                    else:
+                        st.warning(f"⚠️ {message}")
+                else:
+                    st.success("✅ API Key gespeichert (lokal)")
+            else:
+                st.error("❌ Bitte API Key eingeben")
+        
+        if st.session_state.api_key:
+            st.success("✅ API Key konfiguriert")
         else:
             st.warning("⚠️ Bitte API Key eingeben")
         

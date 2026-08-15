@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 from supabase import create_client, Client
 
@@ -20,11 +21,18 @@ class SupabaseAuthManager:
         # In Produktion würde dies durch SQL Migrationen erfolgen
         # Hier versuchen wir die Tabelle zu nutzen, Fehler werden abgefangen
         try:
-            # Test ob Tabelle existiert
+            # Test ob users Tabelle existiert
             self.client.table('users').select('*').limit(1).execute()
         except:
             # Tabelle existiert nicht oder anderer Fehler
             # Wir ignoriere es für jetzt und versuchen bei add_user
+            pass
+        
+        # Versuche auch api_keys Tabelle zu initialisieren
+        try:
+            self.client.table('api_keys').select('*').limit(1).execute()
+        except:
+            # api_keys Tabelle existiert nicht, ignoriere für jetzt
             pass
     
     def _hash_password(self, password):
@@ -178,3 +186,32 @@ class SupabaseAuthManager:
         """Gibt die aktuelle Rolle zurück"""
         import streamlit as st
         return st.session_state.get('role', None)
+    
+    def save_api_key(self, provider, api_key):
+        """Speichert API Key in der Datenbank"""
+        try:
+            # Prüfe ob API Key bereits existiert
+            existing = self.client.table('api_keys').select('*').eq('provider', provider).execute()
+            
+            if existing.data:
+                # Update
+                self.client.table('api_keys').update({'api_key': api_key}).eq('provider', provider).execute()
+            else:
+                # Insert
+                self.client.table('api_keys').insert({'provider': provider, 'api_key': api_key}).execute()
+            
+            return True, "API Key erfolgreich gespeichert"
+        except Exception as e:
+            return False, f"Fehler beim Speichern des API Keys: {str(e)}"
+    
+    def get_api_key(self, provider):
+        """Ruft API Key aus der Datenbank ab"""
+        try:
+            result = self.client.table('api_keys').select('*').eq('provider', provider).execute()
+            
+            if result.data:
+                return result.data[0]['api_key']
+            return None
+        except Exception as e:
+            print(f"Fehler beim Abrufen des API Keys: {e}")
+            return None
