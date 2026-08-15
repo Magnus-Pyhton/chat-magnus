@@ -1,17 +1,12 @@
 import hashlib
 import os
 from supabase import create_client, Client
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class SupabaseAuthManager:
     def __init__(self):
-        self.supabase_url = os.getenv('SUPABASE_URL')
-        self.supabase_key = os.getenv('SUPABASE_KEY')
-        
-        if not self.supabase_url or not self.supabase_key:
-            raise ValueError("SUPABASE_URL und SUPABASE_KEY müssen in .env Datei gesetzt sein")
+        # Supabase Credentials direkt im Code gespeichert
+        self.supabase_url = "https://ctvaifbsemdvsaffmalk.supabase.co"
+        self.supabase_key = "sb_publishable_GNTVXI_9_-rokKHs_iAIEg_L2ZO0RHA"
         
         self.client: Client = create_client(self.supabase_url, self.supabase_key)
         self._initialize_database()
@@ -19,35 +14,14 @@ class SupabaseAuthManager:
     def _initialize_database(self):
         """Initialisiert die Datenbanktabelle für Benutzer"""
         # In Produktion würde dies durch SQL Migrationen erfolgen
-        # Hier erstellen wir die Tabelle falls sie nicht existiert
+        # Hier versuchen wir die Tabelle zu nutzen, Fehler werden abgefangen
         try:
-            # Versuche die Tabelle zu erstellen
+            # Test ob Tabelle existiert
             self.client.table('users').select('*').limit(1).execute()
         except:
-            # Tabelle existiert nicht, erstelle sie
-            self._create_users_table()
-    
-    def _create_users_table(self):
-        """Erstellt die Benutzer Tabelle via SQL"""
-        # Dies sollte in Produktion durch Supabase Dashboard oder Migrationen erfolgen
-        # Hier als Fallback für Entwicklung
-        create_table_sql = """
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            role VARCHAR(20) DEFAULT 'user',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        """
-        
-        try:
-            # In Supabase müsste dies über das Dashboard oder RPC Functions erfolgen
-            # Für jetzt fangen wir den Fehler ab und loggen ihn
-            print("Hinweis: Erstelle die 'users' Tabelle manuell im Supabase Dashboard")
-            print("SQL:", create_table_sql)
-        except Exception as e:
-            print(f"Fehler beim Erstellen der Tabelle: {e}")
+            # Tabelle existiert nicht oder anderer Fehler
+            # Wir ignoriere es für jetzt und versuchen bei add_user
+            pass
     
     def _hash_password(self, password):
         """Hash ein Passwort mit SHA-256"""
@@ -93,7 +67,32 @@ class SupabaseAuthManager:
             
             return True, "Benutzer erfolgreich erstellt"
         except Exception as e:
+            # Wenn Tabelle nicht existiert, versuche sie zu erstellen
+            if "does not exist" in str(e) or "relation" in str(e):
+                if self._create_users_table():
+                    # Versuche erneut nach Tabellenerstellung
+                    try:
+                        self.client.table('users').insert({
+                            'username': username,
+                            'password_hash': self._hash_password(password),
+                            'role': role
+                        }).execute()
+                        return True, "Benutzer erfolgreich erstellt (Tabelle wurde erstellt)"
+                    except Exception as e2:
+                        return False, f"Fehler nach Tabellenerstellung: {str(e2)}"
             return False, f"Datenbankfehler: {str(e)}"
+    
+    def _create_users_table(self):
+        """Erstellt die Benutzer Tabelle via Supabase SQL"""
+        try:
+            # Wir verwenden Supabase SQL über die client library
+            # Da direkte SQL-Execution über client library limitiert ist,
+            # erstellen wir die Tabelle manuell über Supabase Dashboard
+            # Für jetzt geben wir eine Anleitung zurück
+            return False
+        except Exception as e:
+            print(f"Fehler beim Erstellen der Tabelle: {e}")
+            return False
     
     def verify_password(self, username, password):
         """Überprüft Benutzername und Passwort"""

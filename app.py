@@ -16,14 +16,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize Auth Manager (mit persistenter Speicherung)
-auth_manager = AuthManager()
-
-# Zeige Speicher-Status in Sidebar
-if auth_manager.users_file:
-    st.sidebar.success(f"✅ Persistente Speicherung: {auth_manager.users_file}")
-else:
-    st.sidebar.info("ℹ️ Session State Speicherung (Cloud nicht beschreibbar)")
+# Initialize Auth Manager mit Supabase
+try:
+    from utils.supabase_auth import SupabaseAuthManager
+    auth_manager = SupabaseAuthManager()
+    st.sidebar.success("✅ Supabase Datenbank verbunden")
+except Exception as e:
+    # Fallback zu lokaler Auth bei Fehlern
+    auth_manager = AuthManager()
+    st.sidebar.warning(f"⚠️ Supabase Verbindung fehlgeschlagen, nutze lokale Auth: {e}")
 
 # Initialize session state for auth
 if 'authenticated' not in st.session_state:
