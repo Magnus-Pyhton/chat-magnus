@@ -16,20 +16,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize Auth Manager
-try:
-    # Versuche Supabase zu verwenden wenn Credentials vorhanden sind
-    if os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_KEY'):
-        from utils.supabase_auth import SupabaseAuthManager
-        auth_manager = SupabaseAuthManager()
-        st.sidebar.success("✅ Supabase Datenbank verbunden")
-    else:
-        auth_manager = AuthManager()
-        st.sidebar.info("ℹ️ Lokale Benutzerverwaltung (Session State)")
-except Exception as e:
-    # Fallback zu lokaler Auth bei Fehlern
-    auth_manager = AuthManager()
-    st.sidebar.warning(f"⚠️ Supabase Verbindung fehlgeschlagen, nutze lokale Auth: {e}")
+# Initialize Auth Manager (einfache lokale Version)
+auth_manager = AuthManager()
+st.sidebar.info("ℹ️ Lokale Benutzerverwaltung aktiv")
 
 # Initialize session state for auth
 if 'authenticated' not in st.session_state:
