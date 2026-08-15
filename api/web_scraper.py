@@ -1,7 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, quote_plus
 import re
+import os
+
+# Encoding auf UTF-8 erzwingen
+os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 def safe_text(text):
     """Encoding-sichere Text-Konvertierung"""
@@ -115,15 +119,15 @@ def safe_print(text):
 
 def perform_web_search(query):
     """Führt eine einfache Web-Suche durch (simuliert)"""
-    # Encoding-sichere Query
+    # Encoding-sichere Query mit quote_plus für bessere URL-Encodierung
     query = safe_text(query)
     
     # In einer echten Implementierung würde hier eine Search-API verwendet
     # Für dieses Beispiel verwenden wir DuckDuckGo und Google als Beispiele
     
     search_engines = [
-        f"https://duckduckgo.com/html/?q={quote(query)}",
-        f"https://www.google.com/search?q={quote(query)}"
+        f"https://duckduckgo.com/html/?q={quote_plus(query)}",
+        f"https://www.google.com/search?q={quote_plus(query)}"
     ]
     
     results = []

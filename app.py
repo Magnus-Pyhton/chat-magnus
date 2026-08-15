@@ -1,11 +1,23 @@
 import streamlit as st
 import os
+import sys
+import locale
 from dotenv import load_dotenv
 from api.openai_client import OpenAIClient
 from api.chatbot import ChatBot
 from api.web_scraper import scrape_web
 from utils.auth import AuthManager
 from utils.supabase_auth import SupabaseAuthManager
+
+# Encoding auf UTF-8 erzwingen
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+try:
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+except:
+    try:
+        locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+    except:
+        pass
 
 load_dotenv()
 

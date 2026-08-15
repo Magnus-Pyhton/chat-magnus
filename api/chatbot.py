@@ -1,5 +1,9 @@
 from .openai_client import OpenAIClient
 from .web_scraper import perform_web_search, safe_print, safe_text
+import os
+
+# Encoding auf UTF-8 erzwingen
+os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 class ChatBot:
     def __init__(self, api_key=None):
