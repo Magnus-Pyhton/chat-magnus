@@ -2,6 +2,20 @@ import hashlib
 import json
 import os
 from supabase import create_client, Client
+import sys
+
+# Encoding-sichere Funktionen
+def safe_str(obj):
+    """Konvertiert zu String mit Encoding-Fallback"""
+    if isinstance(obj, bytes):
+        try:
+            return obj.decode('utf-8', errors='ignore')
+        except:
+            return obj.decode('latin-1', errors='ignore')
+    elif isinstance(obj, str):
+        return obj.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+    else:
+        return str(obj)
 
 class SupabaseAuthManager:
     def __init__(self):
@@ -55,6 +69,9 @@ class SupabaseAuthManager:
     
     def add_user(self, username, password, role="user"):
         """Fügt einen neuen Benutzer hinzu"""
+        # Encoding-sichere Validierung
+        username = safe_str(username)
+        
         # Validierung
         valid, error = self._validate_username(username)
         if not valid:
