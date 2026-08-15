@@ -156,7 +156,7 @@ if not auth_manager.is_authenticated():
             elif new_password != confirm_password:
                 st.error("❌ Passwörter stimmen nicht überein")
             else:
-                success, message = auth_manager.add_user(new_username, new_password)
+                success, message = auth_manager.add_user(new_username, new_password, "user")
                 if success:
                     st.success(f"✅ {message}")
                     st.info("👤 Du kannst dich jetzt einloggen!")
