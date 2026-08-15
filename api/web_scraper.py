@@ -2,13 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote, urljoin
 import re
-import sys
-import io
-
-# System Encoding auf UTF-8 setzen
-if sys.version_info[0] >= 3:
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignore')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='ignore')
 
 def safe_text(text):
     """Encoding-sichere Text-Konvertierung"""
@@ -23,6 +16,16 @@ def safe_text(text):
         return text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
     else:
         return str(text)
+
+def safe_print(text):
+    """Encoding-sichere Print-Funktion"""
+    if text is None:
+        return
+    text = safe_text(text)
+    try:
+        print(text)
+    except Exception as e:
+        pass  # Ignoriere Print-Fehler
 
 def scrape_web(url):
     """Scrapt eine Webseite und extrahiert relevante Inhalte"""

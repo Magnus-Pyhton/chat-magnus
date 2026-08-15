@@ -1,12 +1,5 @@
 from .openai_client import OpenAIClient
 from .web_scraper import perform_web_search, safe_print, safe_text
-import sys
-import io
-
-# System Encoding auf UTF-8 setzen
-if sys.version_info[0] >= 3:
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignore')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='ignore')
 
 class ChatBot:
     def __init__(self, api_key=None):
