@@ -5,27 +5,58 @@ import streamlit as st
 
 class AuthManager:
     def __init__(self):
-        # Für Streamlit Cloud nutzen wir das /mount Verzeichnis für persistente Speicherung
-        self.users_file = "/mount/data/users.json"
+        # Verschiedene mögliche Speicherorte für persistente Speicherung
+        self.storage_locations = [
+            "/mount/data/users.json",  # Streamlit Cloud persistent
+            "/home/admin/.streamlit/users.json",  # Alternative Cloud-Verzeichnis
+            "users.json",  # Lokales Verzeichnis
+            os.path.expanduser("~/.streamlit/users.json")  # Home-Verzeichnis
+        ]
         
-        # Lokalen Fallback für Entwicklung
-        if not os.path.exists("/mount/data"):
-            os.makedirs("/mount/data", exist_ok=True)
-            self.users_file = "users.json"
+        # Finde den ersten beschreibbaren Speicherort
+        self.users_file = self._find_writable_storage()
         
         # Lade Benutzer oder erstelle Standard
         self.users = self._load_users()
     
+    def _find_writable_storage(self):
+        """Findet den ersten beschreibbaren Speicherort"""
+        for location in self.storage_locations:
+            try:
+                # Versuche das Verzeichnis zu erstellen wenn nötig
+                dir_path = os.path.dirname(location)
+                if dir_path and not os.path.exists(dir_path):
+                    os.makedirs(dir_path, exist_ok=True)
+                
+                # Test-Schreiben
+                test_file = location + ".test"
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.remove(test_file)
+                
+                return location
+            except Exception as e:
+                print(f"Speicherort {location} nicht beschreibbar: {e}")
+                continue
+        
+        # Fallback zu Session State
+        return None
+    
     def _load_users(self):
-        """Lädt Benutzer aus persistenter JSON-Datei"""
-        if os.path.exists(self.users_file):
+        """Lädt Benutzer aus persistenter JSON-Datei oder Session State"""
+        # Versuche zuerst aus Datei zu laden
+        if self.users_file and os.path.exists(self.users_file):
             try:
                 with open(self.users_file, 'r') as f:
                     return json.load(f)
             except Exception as e:
                 print(f"Fehler beim Laden der Benutzer: {e}")
         
-        # Standard-Benutzer wenn Datei nicht existiert oder fehlerhaft
+        # Versuche Session State
+        if 'users' in st.session_state:
+            return st.session_state.users
+        
+        # Standard-Benutzer wenn nichts funktioniert
         return {
             "admin": {
                 "password": self._hash_password("5107"),
@@ -34,17 +65,19 @@ class AuthManager:
         }
     
     def _save_users(self):
-        """Speichert Benutzer in persistenter JSON-Datei"""
-        try:
-            # Versuche in das persistente Verzeichnis zu schreiben
-            with open(self.users_file, 'w') as f:
-                json.dump(self.users, f)
-            return True
-        except Exception as e:
-            print(f"Fehler beim Speichern der Benutzer: {e}")
-            # Fallback zu Session State
-            st.session_state.users = self.users
-            return False
+        """Speichert Benutzer mit verschiedenen Methoden"""
+        # Versuche zuerst in Datei zu schreiben
+        if self.users_file:
+            try:
+                with open(self.users_file, 'w') as f:
+                    json.dump(self.users, f)
+                return True
+            except Exception as e:
+                print(f"Fehler beim Speichern in Datei: {e}")
+        
+        # Fallback zu Session State
+        st.session_state.users = self.users
+        return False
     
     def _hash_password(self, password):
         """Hash ein Passwort mit SHA-256"""
@@ -133,3 +166,10 @@ class AuthManager:
     def get_current_role(self):
         """Gibt die aktuelle Rolle zurück"""
         return st.session_state.get('role', None)
+    
+    def get_storage_info(self):
+        """Gibt Informationen über den Speicherort zurück"""
+        if self.users_file:
+            return f"Datei: {self.users_file}"
+        else:
+            return "Session State"

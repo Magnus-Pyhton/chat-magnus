@@ -18,7 +18,12 @@ st.set_page_config(
 
 # Initialize Auth Manager (mit persistenter Speicherung)
 auth_manager = AuthManager()
-st.sidebar.success("✅ Persistente Benutzerspeicherung aktiv")
+
+# Zeige Speicher-Status in Sidebar
+if auth_manager.users_file:
+    st.sidebar.success(f"✅ Persistente Speicherung: {auth_manager.users_file}")
+else:
+    st.sidebar.info("ℹ️ Session State Speicherung (Cloud nicht beschreibbar)")
 
 # Initialize session state for auth
 if 'authenticated' not in st.session_state:
