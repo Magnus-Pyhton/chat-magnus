@@ -6,10 +6,16 @@ import streamlit as st
 class AuthManager:
     def __init__(self):
         self.users_file = "users.json"
-        self.users = self._load_users()
+        # Für Streamlit Cloud verwenden wir Session State als Fallback
+        if 'users' not in st.session_state:
+            self.users = self._load_users()
+            st.session_state.users = self.users
+        else:
+            self.users = st.session_state.users
     
     def _load_users(self):
-        """Lädt Benutzer aus einer JSON-Datei"""
+        """Lädt Benutzer aus einer JSON-Datei oder Session State"""
+        # Versuche zuerst aus Datei zu laden
         if os.path.exists(self.users_file):
             try:
                 with open(self.users_file, 'r') as f:
@@ -26,9 +32,16 @@ class AuthManager:
         }
     
     def _save_users(self):
-        """Speichert Benutzer in einer JSON-Datei"""
-        with open(self.users_file, 'w') as f:
-            json.dump(self.users, f)
+        """Speichert Benutzer in Session State und versucht, in Datei zu speichern"""
+        # Speichere in Session State (funktioniert immer auf Streamlit Cloud)
+        st.session_state.users = self.users
+        
+        # Versuche auch in Datei zu speichern (für lokale Entwicklung)
+        try:
+            with open(self.users_file, 'w') as f:
+                json.dump(self.users, f)
+        except:
+            pass  # Ignoriere Fehler bei Dateischreibzugriff
     
     def _hash_password(self, password):
         """Hash ein Passwort mit SHA-256"""
