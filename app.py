@@ -246,11 +246,11 @@ with st.sidebar:
                 if supabase_available:
                     success, message = auth_manager.save_api_key('openai', api_key)
                     if success:
-                        st.success(f"✅ {message}")
+                        st.success(f"✅ {message} (persistent gespeichert)")
                     else:
-                        st.warning(f"⚠️ {message}")
+                        st.warning(f"⚠️ {message} - nur Session State aktiv")
                 else:
-                    st.success("✅ API Key gespeichert (lokal)")
+                    st.success("✅ API Key gespeichert (Session State)")
             else:
                 st.error("❌ Bitte API Key eingeben")
         

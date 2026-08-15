@@ -188,8 +188,13 @@ class SupabaseAuthManager:
         return st.session_state.get('role', None)
     
     def save_api_key(self, provider, api_key):
-        """Speichert API Key in der Datenbank"""
+        """Speichert API Key in der Datenbank mit Fallback zu Session State"""
+        import streamlit as st
+        
         try:
+            # Prüfe ob api_keys Tabelle existiert
+            self.client.table('api_keys').select('*').limit(1).execute()
+            
             # Prüfe ob API Key bereits existiert
             existing = self.client.table('api_keys').select('*').eq('provider', provider).execute()
             
@@ -200,12 +205,27 @@ class SupabaseAuthManager:
                 # Insert
                 self.client.table('api_keys').insert({'provider': provider, 'api_key': api_key}).execute()
             
-            return True, "API Key erfolgreich gespeichert"
+            # Speichere auch in Session State als Backup
+            st.session_state[f'api_key_{provider}'] = api_key
+            
+            return True, "API Key erfolgreich gespeichert (Datenbank + Session State)"
         except Exception as e:
-            return False, f"Fehler beim Speichern des API Keys: {str(e)}"
+            print(f"Fehler beim Speichern des API Keys: {e}")
+            
+            # Fallback zu Session State
+            st.session_state[f'api_key_{provider}'] = api_key
+            return False, f"Datenbankfehler, in Session State gespeichert: {str(e)}"
     
     def get_api_key(self, provider):
-        """Ruft API Key aus der Datenbank ab"""
+        """Ruft API Key aus der Datenbank oder Session State ab"""
+        import streamlit as st
+        
+        # Versuche zuerst Session State
+        session_key = st.session_state.get(f'api_key_{provider}')
+        if session_key:
+            return session_key
+        
+        # Versuche dann Datenbank
         try:
             result = self.client.table('api_keys').select('*').eq('provider', provider).execute()
             
