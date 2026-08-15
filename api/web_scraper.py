@@ -111,7 +111,7 @@ def safe_print(text):
     try:
         print(text)
     except Exception as e:
-        print(f"Print-Fehler: {e}")
+        pass  # Ignoriere Print-Fehler
 
 def perform_web_search(query):
     """Führt eine einfache Web-Suche durch (simuliert)"""

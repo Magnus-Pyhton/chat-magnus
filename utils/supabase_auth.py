@@ -35,7 +35,7 @@ class SupabaseAuthManager:
             self.client: Client = create_client(self.supabase_url, self.supabase_key)
             self._initialize_database()
         except Exception as e:
-            print(f"Supabase Client Initialisierung fehlgeschlagen: {e}")
+            safe_print(f"Supabase Client Initialisierung fehlgeschlagen: {e}")
             raise
     
     def _initialize_database(self):
@@ -128,7 +128,7 @@ class SupabaseAuthManager:
             # Für jetzt geben wir eine Anleitung zurück
             return False
         except Exception as e:
-            print(f"Fehler beim Erstellen der Tabelle: {e}")
+            safe_print(f"Fehler beim Erstellen der Tabelle: {e}")
             return False
     
     def verify_password(self, username, password):
@@ -143,7 +143,7 @@ class SupabaseAuthManager:
             hashed_password = self._hash_password(password)
             return user['password_hash'] == hashed_password
         except Exception as e:
-            print(f"Fehler bei Passwort-Verifizierung: {e}")
+            safe_print(f"Fehler bei Passwort-Verifizierung: {e}")
             return False
     
     def get_user_role(self, username):
@@ -156,7 +156,7 @@ class SupabaseAuthManager:
             
             return result.data[0]['role']
         except Exception as e:
-            print(f"Fehler beim Abrufen der Benutzerrolle: {e}")
+            safe_print(f"Fehler beim Abrufen der Benutzerrolle: {e}")
             return None
     
     def is_admin(self, username):
@@ -169,7 +169,7 @@ class SupabaseAuthManager:
             result = self.client.table('users').select('username', 'role').execute()
             return {user['username']: {"role": user['role']} for user in result.data}
         except Exception as e:
-            print(f"Fehler beim Abrufen aller Benutzer: {e}")
+            safe_print(f"Fehler beim Abrufen aller Benutzer: {e}")
             return {}
     
     def delete_user(self, username):
@@ -235,11 +235,11 @@ class SupabaseAuthManager:
             
             return True, "API Key erfolgreich gespeichert (Datenbank + Session State)"
         except Exception as e:
-            print(f"Fehler beim Speichern des API Keys: {e}")
+            safe_print(f"Fehler beim Speichern des API Keys: {e}")
             
             # Fallback zu Session State
             st.session_state[f'api_key_{provider}'] = api_key
-            return False, f"Datenbankfehler, in Session State gespeichert: {str(e)}"
+            return False, safe_text(f"Datenbankfehler, in Session State gespeichert: {str(e)}")
     
     def get_api_key(self, provider):
         """Ruft API Key aus der Datenbank oder Session State ab"""
@@ -258,5 +258,5 @@ class SupabaseAuthManager:
                 return result.data[0]['api_key']
             return None
         except Exception as e:
-            print(f"Fehler beim Abrufen des API Keys: {e}")
+            safe_print(f"Fehler beim Abrufen des API Keys: {e}")
             return None

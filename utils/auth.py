@@ -3,6 +3,30 @@ import json
 import os
 import streamlit as st
 
+def safe_text(text):
+    """Encoding-sichere Text-Konvertierung"""
+    if text is None:
+        return ""
+    if isinstance(text, bytes):
+        try:
+            return text.decode('utf-8', errors='ignore')
+        except:
+            return text.decode('latin-1', errors='ignore')
+    elif isinstance(text, str):
+        return text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+    else:
+        return str(text)
+
+def safe_print(text):
+    """Encoding-sichere Print-Funktion"""
+    if text is None:
+        return
+    text = safe_text(text)
+    try:
+        print(text)
+    except Exception as e:
+        pass
+
 class AuthManager:
     def __init__(self):
         # Verschiedene mögliche Speicherorte für persistente Speicherung
@@ -36,7 +60,7 @@ class AuthManager:
                 
                 return location
             except Exception as e:
-                print(f"Speicherort {location} nicht beschreibbar: {e}")
+                safe_print(f"Speicherort {location} nicht beschreibbar: {e}")
                 continue
         
         # Fallback zu Session State
@@ -50,7 +74,7 @@ class AuthManager:
                 with open(self.users_file, 'r') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"Fehler beim Laden der Benutzer: {e}")
+                safe_print(f"Fehler beim Laden der Benutzer: {e}")
         
         # Versuche Session State
         if 'users' in st.session_state:
@@ -73,7 +97,7 @@ class AuthManager:
                     json.dump(self.users, f)
                 return True
             except Exception as e:
-                print(f"Fehler beim Speichern in Datei: {e}")
+                safe_print(f"Fehler beim Speichern in Datei: {e}")
         
         # Fallback zu Session State
         st.session_state.users = self.users
