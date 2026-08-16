@@ -51,6 +51,29 @@ CREATE TABLE IF NOT EXISTS api_keys (
     api_key TEXT NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Erstelle die Chat Logs Tabelle für Chatverläufe
+CREATE TABLE IF NOT EXISTS chat_logs (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    response TEXT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Erstelle die Banned Users Tabelle für gebannte Benutzer
+CREATE TABLE IF NOT EXISTS banned_users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    reason TEXT,
+    banned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Deaktiviere RLS für alle Tabellen
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE api_keys DISABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE banned_users DISABLE ROW LEVEL SECURITY;
 ```
 
 3. Klicke "Run"

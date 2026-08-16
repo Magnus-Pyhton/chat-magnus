@@ -21,6 +21,30 @@ except:
 
 load_dotenv()
 
+def safe_text(text):
+    """Encoding-sichere Text-Konvertierung"""
+    if text is None:
+        return ""
+    if isinstance(text, bytes):
+        try:
+            return text.decode('utf-8', errors='ignore')
+        except:
+            return text.decode('latin-1', errors='ignore')
+    elif isinstance(text, str):
+        return text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+    else:
+        return str(text)
+
+def safe_print(text):
+    """Encoding-sichere Print-Funktion"""
+    if text is None:
+        return
+    text = safe_text(text)
+    try:
+        print(text)
+    except Exception as e:
+        pass
+
 # Page Configuration
 st.set_page_config(
     page_title="Chat Magnus",
@@ -37,6 +61,28 @@ try:
     auth_manager = SupabaseAuthManager()
     supabase_available = True
     st.sidebar.success("✅ Supabase Datenbank verbunden")
+    
+    # Automatisches Löschen alter Chat-Logs (einmal pro Tag)
+    # Wir speichern das letzte Löschdatum in Session State
+    if 'last_cleanup_date' not in st.session_state:
+        from datetime import datetime
+        st.session_state.last_cleanup_date = datetime.now().date()
+        success, message = auth_manager.delete_old_chat_logs(3)
+        if success:
+            safe_print(f"Automatische Chat-Log-Cleanup: {message}")
+        else:
+            safe_print(f"Automatische Chat-Log-Cleanup fehlgeschlagen: {message}")
+    else:
+        # Prüfe ob ein neuer Tag ist
+        from datetime import datetime
+        if st.session_state.last_cleanup_date != datetime.now().date():
+            st.session_state.last_cleanup_date = datetime.now().date()
+            success, message = auth_manager.delete_old_chat_logs(3)
+            if success:
+                safe_print(f"Automatische Chat-Log-Cleanup: {message}")
+            else:
+                safe_print(f"Automatische Chat-Log-Cleanup fehlgeschlagen: {message}")
+                
 except Exception as e:
     # Fallback zu lokaler Auth bei Fehlern
     auth_manager = AuthManager()
@@ -165,8 +211,13 @@ if not auth_manager.is_authenticated():
         
         if st.button("🔑 Einloggen", use_container_width=True):
             if auth_manager.login(username, password):
-                st.success("✅ Erfolgreich eingeloggt!")
-                st.rerun()
+                # Prüfe ob Benutzer gebannt ist
+                if supabase_available and auth_manager.is_user_banned(username):
+                    auth_manager.logout()
+                    st.error("❌ Dein Account wurde gebannt. Kontaktiere den Admin.")
+                else:
+                    st.success("✅ Erfolgreich eingeloggt!")
+                    st.rerun()
             else:
                 st.error("❌ Falscher Benutzername oder Passwort")
     
@@ -386,6 +437,13 @@ elif page == "💬 Chat mit Internet":
                             # Add assistant response to history
                             st.session_state.chat_history.append({"role": "assistant", "content": result["response"]})
                             
+                            # Speichere Chat-Log in Supabase
+                            if supabase_available:
+                                try:
+                                    auth_manager.save_chat_log(current_user, user_input, result["response"])
+                                except Exception as e:
+                                    safe_print(f"Fehler beim Speichern des Chat-Logs: {e}")
+                            
                             if result.get("used_web_search"):
                                 st.session_state.chat_history.append({"role": "system", "content": "🔍 Internet-Suche wurde verwendet"})
                             
@@ -557,6 +615,143 @@ elif page == "👥 Benutzer verwalten":
                     st.rerun()
         else:
             st.info("ℹ️ Keine Benutzer gefunden (außer Admin)")
+        
+        # Tabs für verschiedene Admin-Funktionen
+        tab1, tab2, tab3 = st.tabs(["👥 Benutzerliste", "🚫 Ban-Management", "💬 Chat-Verläufe"])
+        
+        with tab1:
+            st.subheader("Alle Benutzer")
+            
+            users = auth_manager.get_all_users()
+            
+            if users:
+                # Benutzer in einer Tabelle anzeigen
+                user_data = []
+                for username, user_info in users.items():
+                    # Prüfe ob Benutzer gebannt ist
+                    is_banned = False
+                    if supabase_available:
+                        is_banned = auth_manager.is_user_banned(username)
+                    
+                    ban_status = "🚫 Gebannt" if is_banned else "✅ Aktiv"
+                    user_data.append({
+                        "Benutzername": username,
+                        "Rolle": user_info["role"],
+                        "Status": ban_status
+                    })
+                
+                st.dataframe(user_data, use_container_width=True)
+            else:
+                st.info("ℹ️ Keine Benutzer gefunden (außer Admin)")
+        
+        with tab2:
+            st.subheader("Benutzer bannen/entbannen")
+            
+            # Benutzer zum Bannen auswählen
+            users = auth_manager.get_all_users()
+            if users:
+                usernames = [username for username in users.keys() if username != current_user]  # Exclude current admin
+                if usernames:
+                    ban_username = st.selectbox("Benutzer auswählen", usernames)
+                    
+                    col1, col2 = st.columns([1, 1])
+                    
+                    with col1:
+                        ban_reason = st.text_input("Grund (optional)", placeholder="Grund für den Ban", key="ban_reason")
+                        if st.button("🚫 Benutzer bannen", use_container_width=True):
+                            if ban_username:
+                                success, message = auth_manager.ban_user(ban_username, ban_reason)
+                                if success:
+                                    st.success(f"✅ {message}")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ {message}")
+                    
+                    with col2:
+                        if st.button("✅ Benutzer entbannen", use_container_width=True):
+                            if ban_username:
+                                success, message = auth_manager.unban_user(ban_username)
+                                if success:
+                                    st.success(f"✅ {message}")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ {message}")
+                    
+                    # Gebannte Benutzer anzeigen
+                    st.markdown("---")
+                    st.subheader("Gebannte Benutzer")
+                    
+                    if supabase_available:
+                        banned_users = auth_manager.get_banned_users()
+                        if banned_users:
+                            banned_data = []
+                            for ban in banned_users:
+                                banned_data.append({
+                                    "Benutzername": ban['username'],
+                                    "Grund": ban.get('reason', 'Kein Grund'),
+                                    "Gebannt am": ban.get('banned_at', 'Unbekannt')
+                                })
+                            st.dataframe(banned_data, use_container_width=True)
+                        else:
+                            st.info("ℹ️ Keine gebannten Benutzer")
+                else:
+                    st.info("ℹ️ Keine anderen Benutzer zum Bannen verfügbar")
+            else:
+                st.info("ℹ️ Keine Benutzer gefunden")
+        
+        with tab3:
+            st.subheader("Chat-Verläufe")
+            
+            if supabase_available:
+                # Benutzer oder alle auswählen
+                show_all = st.checkbox("Alle Chat-Verläufe anzeigen", value=False)
+                
+                if not show_all:
+                    users = auth_manager.get_all_users()
+                    if users:
+                        usernames = list(users.keys())
+                        selected_user = st.selectbox("Benutzer auswählen", usernames)
+                        chat_logs = auth_manager.get_chat_logs(selected_user, limit=100)
+                    else:
+                        st.info("ℹ️ Keine Benutzer gefunden")
+                        chat_logs = []
+                else:
+                    chat_logs = auth_manager.get_chat_logs(limit=50)
+                
+                if chat_logs:
+                    st.info(f"📊 {len(chat_logs)} Chat-Verläufe gefunden")
+                    
+                    for log in chat_logs:
+                        with st.expander(f"💬 {log['username']} - {log['timestamp'][:19]}"):
+                            st.markdown(f"**Benutzer:** {log['username']}")
+                            st.markdown(f"**Zeit:** {log['timestamp']}")
+                            st.markdown("---")
+                            st.markdown("**👤 Frage:**")
+                            st.markdown(log['message'])
+                            st.markdown("**🤖 Antwort:**")
+                            st.markdown(log['response'])
+                else:
+                    st.info("ℹ️ Keine Chat-Verläufe gefunden")
+                
+                # Automatisches Löschen alter Logs
+                st.markdown("---")
+                st.subheader("Alte Chat-Verläufe löschen")
+                
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    days = st.number_input("Tage", min_value=1, max_value=30, value=3)
+                    if st.button("🗑️ Alte Logs löschen", use_container_width=True):
+                        success, message = auth_manager.delete_old_chat_logs(days)
+                        if success:
+                            st.success(f"✅ {message}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {message}")
+                
+                with col2:
+                    st.info("ℹ️ Chat-Verläufe werden nach 3 Tagen automatisch gelöscht")
+            else:
+                st.warning("⚠️ Supabase nicht verfügbar - Chat-Verläufe können nicht angezeigt werden")
 
 # Footer
 st.markdown("---")

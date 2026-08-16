@@ -56,6 +56,20 @@ class SupabaseAuthManager:
         except:
             # api_keys Tabelle existiert nicht, ignoriere für jetzt
             pass
+        
+        # Versuche chat_logs Tabelle zu initialisieren
+        try:
+            self.client.table('chat_logs').select('*').limit(1).execute()
+        except:
+            # chat_logs Tabelle existiert nicht, ignoriere für jetzt
+            pass
+        
+        # Versuche banned_users Tabelle zu initialisieren
+        try:
+            self.client.table('banned_users').select('*').limit(1).execute()
+        except:
+            # banned_users Tabelle existiert nicht, ignoriere für jetzt
+            pass
     
     def _hash_password(self, password):
         """Hash ein Passwort mit SHA-256"""
@@ -211,6 +225,85 @@ class SupabaseAuthManager:
         """Gibt die aktuelle Rolle zurück"""
         import streamlit as st
         return st.session_state.get('role', None)
+    
+    def save_chat_log(self, username, message, response):
+        """Speichert Chat-Verlauf in der Datenbank"""
+        try:
+            self.client.table('chat_logs').insert({
+                'username': username,
+                'message': message,
+                'response': response,
+                'timestamp': 'now()'
+            }).execute()
+            return True, "Chat-Log gespeichert"
+        except Exception as e:
+            safe_print(f"Fehler beim Speichern des Chat-Logs: {e}")
+            return False, safe_text(f"Fehler: {str(e)}")
+    
+    def get_chat_logs(self, username=None, limit=50):
+        """Ruft Chat-Verläufe ab (optional für spezifischen Benutzer)"""
+        try:
+            if username:
+                result = self.client.table('chat_logs').select('*').eq('username', username).order('timestamp', desc=True).limit(limit).execute()
+            else:
+                result = self.client.table('chat_logs').select('*').order('timestamp', desc=True).limit(limit).execute()
+            
+            return result.data if result.data else []
+        except Exception as e:
+            safe_print(f"Fehler beim Abrufen der Chat-Logs: {e}")
+            return []
+    
+    def delete_old_chat_logs(self, days=3):
+        """Löscht Chat-Verläufe älter als X Tage"""
+        try:
+            from datetime import datetime, timedelta
+            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+            
+            result = self.client.table('chat_logs').delete().lt('timestamp', cutoff_date).execute()
+            return True, f"Chat-Logs älter als {days} Tage gelöscht"
+        except Exception as e:
+            safe_print(f"Fehler beim Löschen alter Chat-Logs: {e}")
+            return False, safe_text(f"Fehler: {str(e)}")
+    
+    def ban_user(self, username, reason=""):
+        """Bannt einen Benutzer"""
+        try:
+            self.client.table('banned_users').insert({
+                'username': username,
+                'reason': reason,
+                'banned_at': 'now()'
+            }).execute()
+            return True, "Benutzer erfolgreich gebannt"
+        except Exception as e:
+            safe_print(f"Fehler beim Bannen des Benutzers: {e}")
+            return False, safe_text(f"Fehler: {str(e)}")
+    
+    def unban_user(self, username):
+        """Entbannt einen Benutzer"""
+        try:
+            self.client.table('banned_users').delete().eq('username', username).execute()
+            return True, "Benutzer erfolgreich entbannt"
+        except Exception as e:
+            safe_print(f"Fehler beim Entbannen des Benutzers: {e}")
+            return False, safe_text(f"Fehler: {str(e)}")
+    
+    def is_user_banned(self, username):
+        """Überprüft ob ein Benutzer gebannt ist"""
+        try:
+            result = self.client.table('banned_users').select('*').eq('username', username).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            safe_print(f"Fehler beim Überprüfen des Ban-Status: {e}")
+            return False
+    
+    def get_banned_users(self):
+        """Gibt alle gebannten Benutzer zurück"""
+        try:
+            result = self.client.table('banned_users').select('*').execute()
+            return result.data if result.data else []
+        except Exception as e:
+            safe_print(f"Fehler beim Abrufen der gebannten Benutzer: {e}")
+            return []
     
     def save_api_key(self, provider, api_key):
         """Speichert API Key in der Datenbank mit Fallback zu Session State"""
