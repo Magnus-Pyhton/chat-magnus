@@ -31,21 +31,19 @@ try:
     if 'last_cleanup_date' not in st.session_state:
         from datetime import datetime
         st.session_state.last_cleanup_date = datetime.now().date()
-        success, message = auth_manager.delete_old_chat_logs(3)
-        if success:
-            # Keine Print-Ausgaben
-        else:
-            safe_print(f"Automatische Chat-Log-Cleanup fehlgeschlagen: {message}")
+        try:
+            auth_manager.delete_old_chat_logs(3)
+        except:
+            pass
     else:
         # Prüfe ob ein neuer Tag ist
         from datetime import datetime
         if st.session_state.last_cleanup_date != datetime.now().date():
             st.session_state.last_cleanup_date = datetime.now().date()
-            success, message = auth_manager.delete_old_chat_logs(3)
-            if success:
-                # Keine Print-Ausgaben
-            else:
-                safe_print(f"Automatische Chat-Log-Cleanup fehlgeschlagen: {message}")
+            try:
+                auth_manager.delete_old_chat_logs(3)
+            except:
+                pass
                 
 except Exception as e:
     # Fallback zu lokaler Auth bei Fehlern
