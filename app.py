@@ -1,7 +1,5 @@
 import streamlit as st
 import os
-import sys
-import locale
 from dotenv import load_dotenv
 from api.openai_client import OpenAIClient
 from api.chatbot import ChatBot
@@ -9,41 +7,7 @@ from api.web_scraper import scrape_web
 from utils.auth import AuthManager
 from utils.supabase_auth import SupabaseAuthManager
 
-# Encoding auf UTF-8 erzwingen
-os.environ['PYTHONIOENCODING'] = 'utf-8'
-try:
-    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-except:
-    try:
-        locale.setlocale(locale.LC_ALL, 'C.UTF-8')
-    except:
-        pass
-
 load_dotenv()
-
-def safe_text(text):
-    """Encoding-sichere Text-Konvertierung"""
-    if text is None:
-        return ""
-    if isinstance(text, bytes):
-        try:
-            return text.decode('utf-8', errors='ignore')
-        except:
-            return text.decode('latin-1', errors='ignore')
-    elif isinstance(text, str):
-        return text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
-    else:
-        return str(text)
-
-def safe_print(text):
-    """Encoding-sichere Print-Funktion"""
-    if text is None:
-        return
-    text = safe_text(text)
-    try:
-        print(text)
-    except Exception as e:
-        pass
 
 # Page Configuration
 st.set_page_config(
@@ -69,7 +33,7 @@ try:
         st.session_state.last_cleanup_date = datetime.now().date()
         success, message = auth_manager.delete_old_chat_logs(3)
         if success:
-            safe_print(f"Automatische Chat-Log-Cleanup: {message}")
+            # Keine Print-Ausgaben
         else:
             safe_print(f"Automatische Chat-Log-Cleanup fehlgeschlagen: {message}")
     else:
@@ -79,7 +43,7 @@ try:
             st.session_state.last_cleanup_date = datetime.now().date()
             success, message = auth_manager.delete_old_chat_logs(3)
             if success:
-                safe_print(f"Automatische Chat-Log-Cleanup: {message}")
+                # Keine Print-Ausgaben
             else:
                 safe_print(f"Automatische Chat-Log-Cleanup fehlgeschlagen: {message}")
                 
@@ -442,7 +406,7 @@ elif page == "💬 Chat mit Internet":
                                 try:
                                     auth_manager.save_chat_log(current_user, user_input, result["response"])
                                 except Exception as e:
-                                    safe_print(f"Fehler beim Speichern des Chat-Logs: {e}")
+                                    # Keine Print-Ausgaben
                             
                             if result.get("used_web_search"):
                                 st.session_state.chat_history.append({"role": "system", "content": "🔍 Internet-Suche wurde verwendet"})
