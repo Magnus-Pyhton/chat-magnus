@@ -404,10 +404,7 @@ elif page == "💬 Chat mit Internet":
                                 try:
                                     auth_manager.save_chat_log(current_user, user_input, result["response"])
                                 except Exception as e:
-                                    # Keine Print-Ausgaben
-                            
-                            if result.get("used_web_search"):
-                                st.session_state.chat_history.append({"role": "system", "content": "🔍 Internet-Suche wurde verwendet"})
+                                    pass  # Ignoriere Fehler bei Chat-Log-Speicherung
                             
                             st.rerun()
                         else:
